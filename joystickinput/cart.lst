@@ -1,0 +1,1078 @@
+------- FILE joystickinput.asm LEVEL 1 PASS 2
+      1  fffe					      PROCESSOR	6502
+      2  10000 ????
+      3  10000 ????						;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+      4  10000 ????						;; include required files with register mapping and macros
+      5  10000 ????						;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+------- FILE macro.h LEVEL 2 PASS 2
+      0  10000 ????				       INCLUDE	"macro.h"
+      1  10000 ????						; MACRO.H
+      2  10000 ????						; Version 1.06, 3/SEPTEMBER/2004
+      3  10000 ????
+      4  10000 ????		00 6a	    VERSION_MACRO =	106
+      5  10000 ????
+      6  10000 ????						;
+      7  10000 ????						; THIS FILE IS EXPLICITLY SUPPORTED AS A DASM-PREFERRED COMPANION FILE
+      8  10000 ????						; PLEASE DO *NOT* REDISTRIBUTE MODIFIED VERSIONS OF THIS FILE!
+      9  10000 ????						;
+     10  10000 ????						; This file defines DASM macros useful for development for the Atari 2600.
+     11  10000 ????						; It is distributed as a companion machine-specific support package
+     12  10000 ????						; for the DASM compiler. Updates to this file, DASM, and associated tools are
+     13  10000 ????						; available at at http://www.atari2600.org/dasm
+     14  10000 ????						;
+     15  10000 ????						; Many thanks to the people who have contributed.  If you take issue with the
+     16  10000 ????						; contents, or would like to add something, please write to me
+     17  10000 ????						; (atari2600@taswegian.com) with your contribution.
+     18  10000 ????						;
+     19  10000 ????						; Latest Revisions...
+     20  10000 ????						;
+     21  10000 ????						; 1.06  03/SEP/2004	 - nice revision of VERTICAL_BLANK (Edwin Blink)
+     22  10000 ????						; 1.05  14/NOV/2003	 - Added VERSION_MACRO equate (which will reflect 100x version #)
+     23  10000 ????						;			   This will allow conditional code to verify MACRO.H being
+     24  10000 ????						;			   used for code assembly.
+     25  10000 ????						; 1.04  13/NOV/2003	 - SET_POINTER macro added (16-bit address load)
+     26  10000 ????						;
+     27  10000 ????						; 1.03  23/JUN/2003	 - CLEAN_START macro added - clears TIA, RAM, registers
+     28  10000 ????						;
+     29  10000 ????						; 1.02  14/JUN/2003	 - VERTICAL_SYNC macro added
+     30  10000 ????						;			   (standardised macro for vertical synch code)
+     31  10000 ????						; 1.01  22/MAR/2003	 - SLEEP macro added. 
+     32  10000 ????						;			 - NO_ILLEGAL_OPCODES switch implemented
+     33  10000 ????						; 1.0	22/MAR/2003		Initial release
+     34  10000 ????
+     35  10000 ????						; Note: These macros use illegal opcodes.  To disable illegal opcode usage, 
+     36  10000 ????						;   define the symbol NO_ILLEGAL_OPCODES (-DNO_ILLEGAL_OPCODES=1 on command-line).
+     37  10000 ????						;   If you do not allow illegal opcode usage, you must include this file 
+     38  10000 ????						;   *after* including VCS.H (as the non-illegal opcodes access hardware
+     39  10000 ????						;   registers and require them to be defined first).
+     40  10000 ????
+     41  10000 ????						; Available macros...
+     42  10000 ????						;   SLEEP n		 - sleep for n cycles
+     43  10000 ????						;   VERTICAL_SYNC	 - correct 3 scanline vertical synch code
+     44  10000 ????						;   CLEAN_START	 - set machine to known state on startup
+     45  10000 ????						;   SET_POINTER	 - load a 16-bit absolute to a 16-bit variable
+     46  10000 ????
+     47  10000 ????						;-------------------------------------------------------------------------------
+     48  10000 ????						; SLEEP duration
+     49  10000 ????						; Original author: Thomas Jentzsch
+     50  10000 ????						; Inserts code which takes the specified number of cycles to execute.	This is
+     51  10000 ????						; useful for code where precise timing is required.
+     52  10000 ????						; ILLEGAL-OPCODE VERSION DOES NOT AFFECT FLAGS OR REGISTERS.
+     53  10000 ????						; LEGAL OPCODE VERSION MAY AFFECT FLAGS
+     54  10000 ????						; Uses illegal opcode (DASM 2.20.01 onwards).
+     55  10000 ????
+     56  10000 ????				       MAC	sleep
+     57  10000 ????			    .CYCLES    SET	{1}
+     58  10000 ????
+     59  10000 ????				       IF	.CYCLES < 2
+     60  10000 ????				       ECHO	"MACRO ERROR: 'SLEEP': Duration must be > 1"
+     61  10000 ????				       ERR
+     62  10000 ????				       ENDIF
+     63  10000 ????
+     64  10000 ????				       IF	.CYCLES & 1
+     65  10000 ????				       IFNCONST	NO_ILLEGAL_OPCODES
+     66  10000 ????				       nop	0
+     67  10000 ????				       ELSE
+     68  10000 ????				       bit	VSYNC
+     69  10000 ????				       ENDIF
+     70  10000 ????			    .CYCLES    SET	.CYCLES - 3
+     71  10000 ????				       ENDIF
+     72  10000 ????
+     73  10000 ????				       REPEAT	.CYCLES / 2
+     74  10000 ????				       nop
+     75  10000 ????				       REPEND
+     76  10000 ????				       ENDM		;usage: SLEEP n (n>1)
+     77  10000 ????
+     78  10000 ????						;-------------------------------------------------------------------------------
+     79  10000 ????						; VERTICAL_SYNC
+     80  10000 ????						; revised version by Edwin Blink -- saves bytes!
+     81  10000 ????						; Inserts the code required for a proper 3 scanline vertical sync sequence
+     82  10000 ????						; Note: Alters the accumulator
+     83  10000 ????
+     84  10000 ????						; OUT: A = 0
+     85  10000 ????
+     86  10000 ????				       MAC	vertical_sync
+     87  10000 ????				       lda	#%1110	; each '1' bits generate a VSYNC ON line (bits 1..3)
+     88  10000 ????			    .VSLP1     sta	WSYNC	; 1st '0' bit resets Vsync, 2nd '0' bit exit loop
+     89  10000 ????				       sta	VSYNC
+     90  10000 ????				       lsr
+     91  10000 ????				       bne	.VSLP1	; branch until VYSNC has been reset
+     92  10000 ????				       ENDM
+     93  10000 ????
+     94  10000 ????						;-------------------------------------------------------------------------------
+     95  10000 ????						; CLEAN_START
+     96  10000 ????						; Original author: Andrew Davie
+     97  10000 ????						; Standardised start-up code, clears stack, all TIA registers and RAM to 0
+     98  10000 ????						; Sets stack pointer to $FF, and all registers to 0
+     99  10000 ????						; Sets decimal mode off, sets interrupt flag (kind of un-necessary)
+    100  10000 ????						; Use as very first section of code on boot (ie: at reset)
+    101  10000 ????						; Code written to minimise total ROM usage - uses weird 6502 knowledge :)
+    102  10000 ????
+    103  10000 ????				       MAC	clean_start
+    104  10000 ????				       sei
+    105  10000 ????				       cld
+    106  10000 ????
+    107  10000 ????				       ldx	#0
+    108  10000 ????				       txa
+    109  10000 ????				       tay
+    110  10000 ????			    .CLEAR_STACK dex
+    111  10000 ????				       txs
+    112  10000 ????				       pha
+    113  10000 ????				       bne	.CLEAR_STACK	; SP=$FF, X = A = Y = 0
+    114  10000 ????
+    115  10000 ????				       ENDM
+    116  10000 ????
+    117  10000 ????						;-------------------------------------------------------
+    118  10000 ????						; SET_POINTER
+    119  10000 ????						; Original author: Manuel Rotschkar
+    120  10000 ????						;
+    121  10000 ????						; Sets a 2 byte RAM pointer to an absolute address.
+    122  10000 ????						;
+    123  10000 ????						; Usage: SET_POINTER pointer, address
+    124  10000 ????						; Example: SET_POINTER SpritePTR, SpriteData
+    125  10000 ????						;
+    126  10000 ????						; Note: Alters the accumulator, NZ flags
+    127  10000 ????						; IN 1: 2 byte RAM location reserved for pointer
+    128  10000 ????						; IN 2: absolute address
+    129  10000 ????
+    130  10000 ????				       MAC	set_pointer
+    131  10000 ????			    .POINTER   SET	{1}
+    132  10000 ????			    .ADDRESS   SET	{2}
+    133  10000 ????
+    134  10000 ????				       LDA	#<.ADDRESS	; Get Lowbyte of Address
+    135  10000 ????				       STA	.POINTER	; Store in pointer
+    136  10000 ????				       LDA	#>.ADDRESS	; Get Hibyte of Address
+    137  10000 ????				       STA	.POINTER+1	; Store in pointer+1
+    138  10000 ????
+    139  10000 ????				       ENDM
+    140  10000 ????
+    141  10000 ????						;-------------------------------------------------------
+    142  10000 ????						; BOUNDARY byte#
+    143  10000 ????						; Original author: Denis Debro (borrowed from Bob Smith / Thomas)
+    144  10000 ????						;
+    145  10000 ????						; Push data to a certain position inside a page and keep count of how
+    146  10000 ????						; many free bytes the programmer will have.
+    147  10000 ????						;
+    148  10000 ????						; eg: BOUNDARY 5    ; position at byte #5 in page
+    149  10000 ????
+    150  10000 ????			    .FREE_BYTES SET	0
+    151  10000 ????				       MAC	boundary
+    152  10000 ????				       REPEAT	256
+    153  10000 ????				       IF	<. % {1} = 0
+    154  10000 ????				       MEXIT
+    155  10000 ????				       ELSE
+    156  10000 ????			    .FREE_BYTES SET	.FREE_BYTES + 1
+    157  10000 ????				       .byte	$00
+    158  10000 ????				       ENDIF
+    159  10000 ????				       REPEND
+    160  10000 ????				       ENDM
+    161  10000 ????
+    162  10000 ????
+    163  10000 ????						; EOF
+------- FILE joystickinput.asm
+------- FILE vcs.h LEVEL 2 PASS 2
+      0  10000 ????				       INCLUDE	"vcs.h"
+      1  10000 ????						; VCS.H
+      2  10000 ????						; Version 1.05, 13/November/2003
+      3  10000 ????
+      4  10000 ????		00 69	    VERSION_VCS =	105
+      5  10000 ????
+      6  10000 ????						; THIS IS A PRELIMINARY RELEASE OF *THE* "STANDARD" VCS.H
+      7  10000 ????						; THIS FILE IS EXPLICITLY SUPPORTED AS A DASM-PREFERRED COMPANION FILE
+      8  10000 ????						; PLEASE DO *NOT* REDISTRIBUTE THIS FILE!
+      9  10000 ????						;
+     10  10000 ????						; This file defines hardware registers and memory mapping for the
+     11  10000 ????						; Atari 2600. It is distributed as a companion machine-specific support package
+     12  10000 ????						; for the DASM compiler. Updates to this file, DASM, and associated tools are
+     13  10000 ????						; available at at http://www.atari2600.org/dasm
+     14  10000 ????						;
+     15  10000 ????						; Many thanks to the original author(s) of this file, and to everyone who has
+     16  10000 ????						; contributed to understanding the Atari 2600.  If you take issue with the
+     17  10000 ????						; contents, or naming of registers, please write to me (atari2600@taswegian.com)
+     18  10000 ????						; with your views.  Please contribute, if you think you can improve this
+     19  10000 ????						; file!
+     20  10000 ????						;
+     21  10000 ????						; Latest Revisions...
+     22  10000 ????						; 1.05  13/NOV/2003	  - Correction to 1.04 - now functions as requested by MR.
+     23  10000 ????						;			  - Added VERSION_VCS equate (which will reflect 100x version #)
+     24  10000 ????						;			    This will allow conditional code to verify VCS.H being
+     25  10000 ????						;			    used for code assembly.
+     26  10000 ????						; 1.04  12/NOV/2003	 Added TIA_BASE_WRITE_ADDRESS and TIA_BASE_READ_ADDRESS for
+     27  10000 ????						;			 convenient disassembly/reassembly compatibility for hardware
+     28  10000 ????						;			 mirrored reading/writing differences.	This is more a 
+     29  10000 ????						;			 readability issue, and binary compatibility with disassembled
+     30  10000 ????						;			 and reassembled sources.  Per Manuel Rotschkar's suggestion.
+     31  10000 ????						; 1.03  12/MAY/2003	 Added SEG segment at end of file to fix old-code compatibility
+     32  10000 ????						;			 which was broken by the use of segments in this file, as
+     33  10000 ????						;			 reported by Manuel Polik on [stella] 11/MAY/2003
+     34  10000 ????						; 1.02  22/MAR/2003	 Added TIMINT($285)
+     35  10000 ????						; 1.01				Constant offset added to allow use for 3F-style bankswitching
+     36  10000 ????						;						 - define TIA_BASE_ADDRESS as $40 for Tigervision carts, otherwise
+     37  10000 ????						;						   it is safe to leave it undefined, and the base address will
+     38  10000 ????						;						   be set to 0.  Thanks to Eckhard Stolberg for the suggestion.
+     39  10000 ????						;			    Note, may use -DLABEL=EXPRESSION to define TIA_BASE_ADDRESS
+     40  10000 ????						;			  - register definitions are now generated through assignment
+     41  10000 ????						;			    in uninitialised segments.	This allows a changeable base
+     42  10000 ????						;			    address architecture.
+     43  10000 ????						; 1.0	22/MAR/2003		Initial release
+     44  10000 ????
+     45  10000 ????
+     46  10000 ????						;-------------------------------------------------------------------------------
+     47  10000 ????
+     48  10000 ????						; TIA_BASE_ADDRESS
+     49  10000 ????						; The TIA_BASE_ADDRESS defines the base address of access to TIA registers.
+     50  10000 ????						; Normally 0, the base address should (externally, before including this file)
+     51  10000 ????						; be set to $40 when creating 3F-bankswitched (and other?) cartridges.
+     52  10000 ????						; The reason is that this bankswitching scheme treats any access to locations
+     53  10000 ????						; < $40 as a bankswitch.
+     54  10000 ????
+     55  10000 ????			   -	       IFNCONST	TIA_BASE_ADDRESS
+     56  10000 ????			   -TIA_BASE_ADDRESS =	0
+     57  10000 ????				       ENDIF
+     58  10000 ????
+     59  10000 ????						; Note: The address may be defined on the command-line using the -D switch, eg:
+     60  10000 ????						; dasm.exe code.asm -DTIA_BASE_ADDRESS=$40 -f3 -v5 -ocode.bin
+     61  10000 ????						; *OR* by declaring the label before including this file, eg:
+     62  10000 ????						; TIA_BASE_ADDRESS = $40
+     63  10000 ????						;   include "vcs.h"
+     64  10000 ????
+     65  10000 ????						; Alternate read/write address capability - allows for some disassembly compatibility
+     66  10000 ????						; usage ; to allow reassembly to binary perfect copies).  This is essentially catering
+     67  10000 ????						; for the mirrored ROM hardware registers.
+     68  10000 ????
+     69  10000 ????						; Usage: As per above, define the TIA_BASE_READ_ADDRESS and/or TIA_BASE_WRITE_ADDRESS
+     70  10000 ????						; using the -D command-line switch, as required.  If the addresses are not defined, 
+     71  10000 ????						; they defaut to the TIA_BASE_ADDRESS.
+     72  10000 ????
+     73  10000 ????			   -	       IFNCONST	TIA_BASE_READ_ADDRESS
+     74  10000 ????			   -TIA_BASE_READ_ADDRESS =	TIA_BASE_ADDRESS
+     75  10000 ????				       ENDIF
+     76  10000 ????
+     77  10000 ????			   -	       IFNCONST	TIA_BASE_WRITE_ADDRESS
+     78  10000 ????			   -TIA_BASE_WRITE_ADDRESS =	TIA_BASE_ADDRESS
+     79  10000 ????				       ENDIF
+     80  10000 ????
+     81  10000 ????						;-------------------------------------------------------------------------------
+     82  10000 ????
+     83 U002d ????				      SEG.U	TIA_REGISTERS_WRITE
+     84 U0000					      ORG	TIA_BASE_WRITE_ADDRESS
+     85 U0000
+     86 U0000							; DO NOT CHANGE THE RELATIVE ORDERING OF REGISTERS!
+     87 U0000
+     88 U0000		       00	   VSYNC      ds	1	; $00	 0000 00x0   Vertical Sync Set-Clear
+     89 U0001		       00	   VBLANK     ds	1	; $01	 xx00 00x0   Vertical Blank Set-Clear
+     90 U0002		       00	   WSYNC      ds	1	; $02	 ---- ----   Wait for Horizontal Blank
+     91 U0003		       00	   RSYNC      ds	1	; $03	 ---- ----   Reset Horizontal Sync Counter
+     92 U0004		       00	   NUSIZ0     ds	1	; $04	 00xx 0xxx   Number-Size player/missle 0
+     93 U0005		       00	   NUSIZ1     ds	1	; $05	 00xx 0xxx   Number-Size player/missle 1
+     94 U0006		       00	   COLUP0     ds	1	; $06	 xxxx xxx0   Color-Luminance Player 0
+     95 U0007		       00	   COLUP1     ds	1	; $07	 xxxx xxx0   Color-Luminance Player 1
+     96 U0008		       00	   COLUPF     ds	1	; $08	 xxxx xxx0   Color-Luminance Playfield
+     97 U0009		       00	   COLUBK     ds	1	; $09	 xxxx xxx0   Color-Luminance Background
+     98 U000a		       00	   CTRLPF     ds	1	; $0A	 00xx 0xxx   Control Playfield, Ball, Collisions
+     99 U000b		       00	   REFP0      ds	1	; $0B	 0000 x000   Reflection Player 0
+    100 U000c		       00	   REFP1      ds	1	; $0C	 0000 x000   Reflection Player 1
+    101 U000d		       00	   PF0	      ds	1	; $0D	 xxxx 0000   Playfield Register Byte 0
+    102 U000e		       00	   PF1	      ds	1	; $0E	 xxxx xxxx   Playfield Register Byte 1
+    103 U000f		       00	   PF2	      ds	1	; $0F	 xxxx xxxx   Playfield Register Byte 2
+    104 U0010		       00	   RESP0      ds	1	; $10	 ---- ----   Reset Player 0
+    105 U0011		       00	   RESP1      ds	1	; $11	 ---- ----   Reset Player 1
+    106 U0012		       00	   RESM0      ds	1	; $12	 ---- ----   Reset Missle 0
+    107 U0013		       00	   RESM1      ds	1	; $13	 ---- ----   Reset Missle 1
+    108 U0014		       00	   RESBL      ds	1	; $14	 ---- ----   Reset Ball
+    109 U0015		       00	   AUDC0      ds	1	; $15	 0000 xxxx   Audio Control 0
+    110 U0016		       00	   AUDC1      ds	1	; $16	 0000 xxxx   Audio Control 1
+    111 U0017		       00	   AUDF0      ds	1	; $17	 000x xxxx   Audio Frequency 0
+    112 U0018		       00	   AUDF1      ds	1	; $18	 000x xxxx   Audio Frequency 1
+    113 U0019		       00	   AUDV0      ds	1	; $19	 0000 xxxx   Audio Volume 0
+    114 U001a		       00	   AUDV1      ds	1	; $1A	 0000 xxxx   Audio Volume 1
+    115 U001b		       00	   GRP0       ds	1	; $1B	 xxxx xxxx   Graphics Register Player 0
+    116 U001c		       00	   GRP1       ds	1	; $1C	 xxxx xxxx   Graphics Register Player 1
+    117 U001d		       00	   ENAM0      ds	1	; $1D	 0000 00x0   Graphics Enable Missle 0
+    118 U001e		       00	   ENAM1      ds	1	; $1E	 0000 00x0   Graphics Enable Missle 1
+    119 U001f		       00	   ENABL      ds	1	; $1F	 0000 00x0   Graphics Enable Ball
+    120 U0020		       00	   HMP0       ds	1	; $20	 xxxx 0000   Horizontal Motion Player 0
+    121 U0021		       00	   HMP1       ds	1	; $21	 xxxx 0000   Horizontal Motion Player 1
+    122 U0022		       00	   HMM0       ds	1	; $22	 xxxx 0000   Horizontal Motion Missle 0
+    123 U0023		       00	   HMM1       ds	1	; $23	 xxxx 0000   Horizontal Motion Missle 1
+    124 U0024		       00	   HMBL       ds	1	; $24	 xxxx 0000   Horizontal Motion Ball
+    125 U0025		       00	   VDELP0     ds	1	; $25	 0000 000x   Vertical Delay Player 0
+    126 U0026		       00	   VDELP1     ds	1	; $26	 0000 000x   Vertical Delay Player 1
+    127 U0027		       00	   VDELBL     ds	1	; $27	 0000 000x   Vertical Delay Ball
+    128 U0028		       00	   RESMP0     ds	1	; $28	 0000 00x0   Reset Missle 0 to Player 0
+    129 U0029		       00	   RESMP1     ds	1	; $29	 0000 00x0   Reset Missle 1 to Player 1
+    130 U002a		       00	   HMOVE      ds	1	; $2A	 ---- ----   Apply Horizontal Motion
+    131 U002b		       00	   HMCLR      ds	1	; $2B	 ---- ----   Clear Horizontal Move Registers
+    132 U002c		       00	   CXCLR      ds	1	; $2C	 ---- ----   Clear Collision Latches
+    133 U002d
+    134 U002d							;-------------------------------------------------------------------------------
+    135 U002d
+    136 U000e ????				      SEG.U	TIA_REGISTERS_READ
+    137 U0000					      ORG	TIA_BASE_READ_ADDRESS
+    138 U0000
+    139 U0000							;											bit 7	 bit 6
+    140 U0000		       00	   CXM0P      ds	1	; $00	     xx00 0000	     Read Collision  M0-P1   M0-P0
+    141 U0001		       00	   CXM1P      ds	1	; $01	     xx00 0000			     M1-P0   M1-P1
+    142 U0002		       00	   CXP0FB     ds	1	; $02	     xx00 0000			     P0-PF   P0-BL
+    143 U0003		       00	   CXP1FB     ds	1	; $03	     xx00 0000			     P1-PF   P1-BL
+    144 U0004		       00	   CXM0FB     ds	1	; $04	     xx00 0000			     M0-PF   M0-BL
+    145 U0005		       00	   CXM1FB     ds	1	; $05	     xx00 0000			     M1-PF   M1-BL
+    146 U0006		       00	   CXBLPF     ds	1	; $06	     x000 0000			     BL-PF   -----
+    147 U0007		       00	   CXPPMM     ds	1	; $07	     xx00 0000			     P0-P1   M0-M1
+    148 U0008		       00	   INPT0      ds	1	; $08	     x000 0000	     Read Pot Port 0
+    149 U0009		       00	   INPT1      ds	1	; $09	     x000 0000	     Read Pot Port 1
+    150 U000a		       00	   INPT2      ds	1	; $0A	     x000 0000	     Read Pot Port 2
+    151 U000b		       00	   INPT3      ds	1	; $0B	     x000 0000	     Read Pot Port 3
+    152 U000c		       00	   INPT4      ds	1	; $0C		x000 0000	 Read Input (Trigger) 0
+    153 U000d		       00	   INPT5      ds	1	; $0D		x000 0000	 Read Input (Trigger) 1
+    154 U000e
+    155 U000e							;-------------------------------------------------------------------------------
+    156 U000e
+    157 U0298 ????				      SEG.U	RIOT
+    158 U0280					      ORG	$280
+    159 U0280
+    160 U0280							; RIOT MEMORY MAP
+    161 U0280
+    162 U0280		       00	   SWCHA      ds	1	; $280      Port A data register for joysticks:
+    163 U0281							;			Bits 4-7 for player 1.  Bits 0-3 for player 2.
+    164 U0281
+    165 U0281		       00	   SWACNT     ds	1	; $281      Port A data direction register (DDR)
+    166 U0282		       00	   SWCHB      ds	1	; $282		Port B data (console switches)
+    167 U0283		       00	   SWBCNT     ds	1	; $283      Port B DDR
+    168 U0284		       00	   INTIM      ds	1	; $284		Timer output
+    169 U0285
+    170 U0285		       00	   TIMINT     ds	1	; $285
+    171 U0286
+    172 U0286							; Unused/undefined registers ($285-$294)
+    173 U0286
+    174 U0286		       00		      ds	1	; $286
+    175 U0287		       00		      ds	1	; $287
+    176 U0288		       00		      ds	1	; $288
+    177 U0289		       00		      ds	1	; $289
+    178 U028a		       00		      ds	1	; $28A
+    179 U028b		       00		      ds	1	; $28B
+    180 U028c		       00		      ds	1	; $28C
+    181 U028d		       00		      ds	1	; $28D
+    182 U028e		       00		      ds	1	; $28E
+    183 U028f		       00		      ds	1	; $28F
+    184 U0290		       00		      ds	1	; $290
+    185 U0291		       00		      ds	1	; $291
+    186 U0292		       00		      ds	1	; $292
+    187 U0293		       00		      ds	1	; $293
+    188 U0294
+    189 U0294		       00	   TIM1T      ds	1	; $294		set 1 clock interval
+    190 U0295		       00	   TIM8T      ds	1	; $295      set 8 clock interval
+    191 U0296		       00	   TIM64T     ds	1	; $296      set 64 clock interval
+    192 U0297		       00	   T1024T     ds	1	; $297      set 1024 clock interval
+    193 U0298
+    194 U0298							;-------------------------------------------------------------------------------
+    195 U0298							; The following required for back-compatibility with code which does not use
+    196 U0298							; segments.
+    197 U0298
+    198  0000 ????				      SEG
+    199  0000 ????
+    200  0000 ????						; EOF
+------- FILE joystickinput.asm
+      8  0000 ????
+      9  0000 ????						;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     10  0000 ????						;; start an uninitialized segment at $80 for var declaration.
+     11  0000 ????						;; we have memory from $80 to $FF to work with, minus a few at
+     12  0000 ????						;; the end if we use the stack
+     13  0000 ????						;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     14 U0081 ????				      SEG.U	Variable
+     15 U0080					      ORG	$80
+     16 U0080		       00	   P0XPos     byte.b		; sprite X cordinate
+     17 U0081
+     18 U0081							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     19 U0081							;; strat our ROM code segment starting at $F000
+     20 U0081							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     21  10000 ????				       SEG	Code
+     22  f000					      ORG	$F000
+     23  f000
+     24  f000				   Reset
+      0  f000					      CLEAN_START		; macro to clean memory and TIA
+      1  f000		       78		      sei
+      2  f001		       d8		      cld
+      3  f002
+      4  f002		       a2 00		      ldx	#0
+      5  f004		       8a		      txa
+      6  f005		       a8		      tay
+      7  f006		       ca	   .CLEAR_STACK dex
+      8  f007		       9a		      txs
+      9  f008		       48		      pha
+     10  f009		       d0 fb		      bne	.CLEAR_STACK
+     11  f00b
+     26  f00b
+     27  f00b		       a2 80		      LDX	#$80	; blue background color
+     28  f00d		       86 09		      STX	COLUBK
+     29  f00f
+     30  f00f		       a2 d0		      LDX	#$D0	; green playfield floor color
+     31  f011		       86 08		      STX	COLUPF
+     32  f013
+     33  f013							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     34  f013							;; initialize variables 
+     35  f013							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     36  f013		       a9 0a		      LDA	#10
+     37  f015		       85 80		      STA	P0XPos	; initialize player X cordinate
+     38  f017
+     39  f017							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     40  f017							;; start a new frame by configuring VBLANK and VSYNC
+     41  f017							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     42  f017				   StartFrame
+     43  f017		       a9 02		      LDA	#2
+     44  f019		       85 01		      STA	VBLANK	; turn VBLANK on
+     45  f01b		       85 00		      STA	VSYNC	; turn VSYNC on
+     46  f01d
+     47  f01d							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     48  f01d							;; display 3 vertical lines of VSYNC
+     49  f01d							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     50  f01d					      REPEAT	3
+     51  f01d		       85 02		      STA	WSYNC	; first 3 VSYNC scanline
+     50  f01d					      REPEND
+     51  f01f		       85 02		      STA	WSYNC	; first 3 VSYNC scanline
+     50  f01f					      REPEND
+     51  f021		       85 02		      STA	WSYNC	; first 3 VSYNC scanline
+     52  f023					      REPEND
+     53  f023		       a9 00		      LDA	#0
+     54  f025		       85 00		      STA	VSYNC	; turn VSYNC off
+     55  f027
+     56  f027							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     57  f027							;; set player horizontal position while we are the VBLANK 
+     58  f027							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     59  f027		       a5 80		      LDA	P0XPos	; load register A with desired X position
+     60  f029		       29 7f		      AND	#$7F	; same as AND 01111111, forces bit 7 to zero
+     61  f02b							; keeping the value inside A always positive
+     62  f02b
+     63  f02b		       85 02		      STA	WSYNC	; wait for next scanline
+     64  f02d		       85 2b		      STA	HMCLR	; clear old horizontal position value
+     65  f02f
+     66  f02f		       38		      SEC		; set carry flag before subtraction
+     67  f030				   DivideLoop
+     68  f030		       e9 0f		      SBC	#15	; A -= 15
+     69  f032		       b0 fc		      BCS	DivideLoop	; loop while carry flag is still set
+     70  f034
+     71  f034		       49 07		      EOR	#7	; adjust the reminder in A between -8 and 7
+     72  f036		       0a		      ASL		; shift left by 4, as HMP0 uses only for bits 
+     73  f037		       0a		      ASL
+     74  f038		       0a		      ASL
+     75  f039		       0a		      ASL
+     76  f03a		       85 20		      STA	HMP0	; set fine position 
+     77  f03c		       85 10		      STA	RESP0	; reset 15-step brute position
+     78  f03e		       85 02		      STA	WSYNC	; wait for next scanline 
+     79  f040		       85 2a		      STA	HMOVE	; apply the fine position offset
+     80  f042
+     81  f042							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     82  f042							;; let the TIA output the (37-2) recommended lines of VBLANK
+     83  f042							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     84  f042					      REPEAT	35
+     85  f042		       85 02		      STA	WSYNC
+     84  f042					      REPEND
+     85  f044		       85 02		      STA	WSYNC
+     84  f044					      REPEND
+     85  f046		       85 02		      STA	WSYNC
+     84  f046					      REPEND
+     85  f048		       85 02		      STA	WSYNC
+     84  f048					      REPEND
+     85  f04a		       85 02		      STA	WSYNC
+     84  f04a					      REPEND
+     85  f04c		       85 02		      STA	WSYNC
+     84  f04c					      REPEND
+     85  f04e		       85 02		      STA	WSYNC
+     84  f04e					      REPEND
+     85  f050		       85 02		      STA	WSYNC
+     84  f050					      REPEND
+     85  f052		       85 02		      STA	WSYNC
+     84  f052					      REPEND
+     85  f054		       85 02		      STA	WSYNC
+     84  f054					      REPEND
+     85  f056		       85 02		      STA	WSYNC
+     84  f056					      REPEND
+     85  f058		       85 02		      STA	WSYNC
+     84  f058					      REPEND
+     85  f05a		       85 02		      STA	WSYNC
+     84  f05a					      REPEND
+     85  f05c		       85 02		      STA	WSYNC
+     84  f05c					      REPEND
+     85  f05e		       85 02		      STA	WSYNC
+     84  f05e					      REPEND
+     85  f060		       85 02		      STA	WSYNC
+     84  f060					      REPEND
+     85  f062		       85 02		      STA	WSYNC
+     84  f062					      REPEND
+     85  f064		       85 02		      STA	WSYNC
+     84  f064					      REPEND
+     85  f066		       85 02		      STA	WSYNC
+     84  f066					      REPEND
+     85  f068		       85 02		      STA	WSYNC
+     84  f068					      REPEND
+     85  f06a		       85 02		      STA	WSYNC
+     84  f06a					      REPEND
+     85  f06c		       85 02		      STA	WSYNC
+     84  f06c					      REPEND
+     85  f06e		       85 02		      STA	WSYNC
+     84  f06e					      REPEND
+     85  f070		       85 02		      STA	WSYNC
+     84  f070					      REPEND
+     85  f072		       85 02		      STA	WSYNC
+     84  f072					      REPEND
+     85  f074		       85 02		      STA	WSYNC
+     84  f074					      REPEND
+     85  f076		       85 02		      STA	WSYNC
+     84  f076					      REPEND
+     85  f078		       85 02		      STA	WSYNC
+     84  f078					      REPEND
+     85  f07a		       85 02		      STA	WSYNC
+     84  f07a					      REPEND
+     85  f07c		       85 02		      STA	WSYNC
+     84  f07c					      REPEND
+     85  f07e		       85 02		      STA	WSYNC
+     84  f07e					      REPEND
+     85  f080		       85 02		      STA	WSYNC
+     84  f080					      REPEND
+     85  f082		       85 02		      STA	WSYNC
+     84  f082					      REPEND
+     85  f084		       85 02		      STA	WSYNC
+     84  f084					      REPEND
+     85  f086		       85 02		      STA	WSYNC
+     86  f088					      REPEND
+     87  f088
+     88  f088		       a9 00		      LDA	#0
+     89  f08a		       85 01		      STA	VBLANK	; turn VBLANK off
+     90  f08c
+     91  f08c							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     92  f08c							;; draw the 192 visible scanline 
+     93  f08c							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     94  f08c					      REPEAT	160
+     95  f08c		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f08c					      REPEND
+     95  f08e		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f08e					      REPEND
+     95  f090		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f090					      REPEND
+     95  f092		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f092					      REPEND
+     95  f094		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f094					      REPEND
+     95  f096		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f096					      REPEND
+     95  f098		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f098					      REPEND
+     95  f09a		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f09a					      REPEND
+     95  f09c		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f09c					      REPEND
+     95  f09e		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f09e					      REPEND
+     95  f0a0		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0a0					      REPEND
+     95  f0a2		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0a2					      REPEND
+     95  f0a4		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0a4					      REPEND
+     95  f0a6		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0a6					      REPEND
+     95  f0a8		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0a8					      REPEND
+     95  f0aa		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0aa					      REPEND
+     95  f0ac		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0ac					      REPEND
+     95  f0ae		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0ae					      REPEND
+     95  f0b0		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0b0					      REPEND
+     95  f0b2		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0b2					      REPEND
+     95  f0b4		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0b4					      REPEND
+     95  f0b6		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0b6					      REPEND
+     95  f0b8		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0b8					      REPEND
+     95  f0ba		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0ba					      REPEND
+     95  f0bc		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0bc					      REPEND
+     95  f0be		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0be					      REPEND
+     95  f0c0		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0c0					      REPEND
+     95  f0c2		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0c2					      REPEND
+     95  f0c4		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0c4					      REPEND
+     95  f0c6		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0c6					      REPEND
+     95  f0c8		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0c8					      REPEND
+     95  f0ca		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0ca					      REPEND
+     95  f0cc		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0cc					      REPEND
+     95  f0ce		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0ce					      REPEND
+     95  f0d0		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0d0					      REPEND
+     95  f0d2		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0d2					      REPEND
+     95  f0d4		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0d4					      REPEND
+     95  f0d6		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0d6					      REPEND
+     95  f0d8		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0d8					      REPEND
+     95  f0da		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0da					      REPEND
+     95  f0dc		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0dc					      REPEND
+     95  f0de		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0de					      REPEND
+     95  f0e0		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0e0					      REPEND
+     95  f0e2		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0e2					      REPEND
+     95  f0e4		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0e4					      REPEND
+     95  f0e6		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0e6					      REPEND
+     95  f0e8		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0e8					      REPEND
+     95  f0ea		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0ea					      REPEND
+     95  f0ec		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0ec					      REPEND
+     95  f0ee		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0ee					      REPEND
+     95  f0f0		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0f0					      REPEND
+     95  f0f2		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0f2					      REPEND
+     95  f0f4		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0f4					      REPEND
+     95  f0f6		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0f6					      REPEND
+     95  f0f8		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0f8					      REPEND
+     95  f0fa		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0fa					      REPEND
+     95  f0fc		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0fc					      REPEND
+     95  f0fe		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f0fe					      REPEND
+     95  f100		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f100					      REPEND
+     95  f102		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f102					      REPEND
+     95  f104		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f104					      REPEND
+     95  f106		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f106					      REPEND
+     95  f108		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f108					      REPEND
+     95  f10a		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f10a					      REPEND
+     95  f10c		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f10c					      REPEND
+     95  f10e		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f10e					      REPEND
+     95  f110		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f110					      REPEND
+     95  f112		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f112					      REPEND
+     95  f114		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f114					      REPEND
+     95  f116		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f116					      REPEND
+     95  f118		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f118					      REPEND
+     95  f11a		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f11a					      REPEND
+     95  f11c		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f11c					      REPEND
+     95  f11e		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f11e					      REPEND
+     95  f120		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f120					      REPEND
+     95  f122		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f122					      REPEND
+     95  f124		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f124					      REPEND
+     95  f126		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f126					      REPEND
+     95  f128		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f128					      REPEND
+     95  f12a		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f12a					      REPEND
+     95  f12c		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f12c					      REPEND
+     95  f12e		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f12e					      REPEND
+     95  f130		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f130					      REPEND
+     95  f132		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f132					      REPEND
+     95  f134		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f134					      REPEND
+     95  f136		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f136					      REPEND
+     95  f138		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f138					      REPEND
+     95  f13a		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f13a					      REPEND
+     95  f13c		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f13c					      REPEND
+     95  f13e		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f13e					      REPEND
+     95  f140		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f140					      REPEND
+     95  f142		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f142					      REPEND
+     95  f144		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f144					      REPEND
+     95  f146		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f146					      REPEND
+     95  f148		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f148					      REPEND
+     95  f14a		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f14a					      REPEND
+     95  f14c		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f14c					      REPEND
+     95  f14e		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f14e					      REPEND
+     95  f150		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f150					      REPEND
+     95  f152		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f152					      REPEND
+     95  f154		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f154					      REPEND
+     95  f156		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f156					      REPEND
+     95  f158		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f158					      REPEND
+     95  f15a		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f15a					      REPEND
+     95  f15c		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f15c					      REPEND
+     95  f15e		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f15e					      REPEND
+     95  f160		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f160					      REPEND
+     95  f162		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f162					      REPEND
+     95  f164		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f164					      REPEND
+     95  f166		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f166					      REPEND
+     95  f168		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f168					      REPEND
+     95  f16a		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f16a					      REPEND
+     95  f16c		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f16c					      REPEND
+     95  f16e		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f16e					      REPEND
+     95  f170		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f170					      REPEND
+     95  f172		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f172					      REPEND
+     95  f174		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f174					      REPEND
+     95  f176		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f176					      REPEND
+     95  f178		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f178					      REPEND
+     95  f17a		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f17a					      REPEND
+     95  f17c		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f17c					      REPEND
+     95  f17e		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f17e					      REPEND
+     95  f180		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f180					      REPEND
+     95  f182		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f182					      REPEND
+     95  f184		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f184					      REPEND
+     95  f186		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f186					      REPEND
+     95  f188		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f188					      REPEND
+     95  f18a		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f18a					      REPEND
+     95  f18c		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f18c					      REPEND
+     95  f18e		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f18e					      REPEND
+     95  f190		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f190					      REPEND
+     95  f192		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f192					      REPEND
+     95  f194		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f194					      REPEND
+     95  f196		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f196					      REPEND
+     95  f198		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f198					      REPEND
+     95  f19a		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f19a					      REPEND
+     95  f19c		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f19c					      REPEND
+     95  f19e		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f19e					      REPEND
+     95  f1a0		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1a0					      REPEND
+     95  f1a2		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1a2					      REPEND
+     95  f1a4		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1a4					      REPEND
+     95  f1a6		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1a6					      REPEND
+     95  f1a8		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1a8					      REPEND
+     95  f1aa		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1aa					      REPEND
+     95  f1ac		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1ac					      REPEND
+     95  f1ae		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1ae					      REPEND
+     95  f1b0		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1b0					      REPEND
+     95  f1b2		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1b2					      REPEND
+     95  f1b4		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1b4					      REPEND
+     95  f1b6		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1b6					      REPEND
+     95  f1b8		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1b8					      REPEND
+     95  f1ba		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1ba					      REPEND
+     95  f1bc		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1bc					      REPEND
+     95  f1be		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1be					      REPEND
+     95  f1c0		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1c0					      REPEND
+     95  f1c2		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1c2					      REPEND
+     95  f1c4		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1c4					      REPEND
+     95  f1c6		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1c6					      REPEND
+     95  f1c8		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     94  f1c8					      REPEND
+     95  f1ca		       85 02		      STA	WSYNC	; wait for 160 empty scanlines
+     96  f1cc					      REPEND
+     97  f1cc
+     98  f1cc		       a0 11		      LDY	#17	; counter to draw 8 rows of bitmap
+     99  f1ce				   DrawBitmap
+    100  f1ce		       b9 76 f2 	      LDA	P0Bitmap,Y	; load player bitmap slice of data
+    101  f1d1		       85 1b		      STA	GRP0	; set graphics for player 0 slice
+    102  f1d3
+    103  f1d3		       b9 87 f2 	      LDA	P0Color,Y	; load player color from lookup table 
+    104  f1d6		       85 06		      STA	COLUP0	; set color for player 0 slice
+    105  f1d8
+    106  f1d8		       85 02		      STA	WSYNC	; wait for next scanline 
+    107  f1da
+    108  f1da		       88		      DEY
+    109  f1db		       d0 f1		      BNE	DrawBitmap	; repeat next scanline until finished
+    110  f1dd
+    111  f1dd		       a9 00		      LDA	#0
+    112  f1df		       85 1b		      STA	GRP0	; disable P0 bitmap graphics
+    113  f1e1
+    114  f1e1		       a9 ff		      LDA	#$FF	; enable grass playfield
+    115  f1e3		       85 0d		      STA	PF0
+    116  f1e5		       85 0e		      STA	PF1
+    117  f1e7		       85 0f		      STA	PF2
+    118  f1e9
+    119  f1e9					      REPEAT	15
+    120  f1e9		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f1e9					      REPEND
+    120  f1eb		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f1eb					      REPEND
+    120  f1ed		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f1ed					      REPEND
+    120  f1ef		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f1ef					      REPEND
+    120  f1f1		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f1f1					      REPEND
+    120  f1f3		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f1f3					      REPEND
+    120  f1f5		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f1f5					      REPEND
+    120  f1f7		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f1f7					      REPEND
+    120  f1f9		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f1f9					      REPEND
+    120  f1fb		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f1fb					      REPEND
+    120  f1fd		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f1fd					      REPEND
+    120  f1ff		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f1ff					      REPEND
+    120  f201		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f201					      REPEND
+    120  f203		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    119  f203					      REPEND
+    120  f205		       85 02		      STA	WSYNC	; wait for remaining 15 empty scanlines
+    121  f207					      REPEND
+    122  f207
+    123  f207		       a9 00		      LDA	#0	; disable grass playfield
+    124  f209		       85 0d		      STA	PF0
+    125  f20b		       85 0e		      STA	PF1
+    126  f20d		       85 0f		      STA	PF2
+    127  f20f
+    128  f20f							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    129  f20f							;; output 30 more VBLANK over scanlines to complete our frame
+    130  f20f							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    131  f20f				   Overscan
+    132  f20f		       a9 02		      LDA	#2
+    133  f211		       85 01		      STA	VBLANK	; turn VBLANK on again for overscan
+    134  f213
+    135  f213					      REPEAT	30
+    136  f213		       85 02		      STA	WSYNC
+    135  f213					      REPEND
+    136  f215		       85 02		      STA	WSYNC
+    135  f215					      REPEND
+    136  f217		       85 02		      STA	WSYNC
+    135  f217					      REPEND
+    136  f219		       85 02		      STA	WSYNC
+    135  f219					      REPEND
+    136  f21b		       85 02		      STA	WSYNC
+    135  f21b					      REPEND
+    136  f21d		       85 02		      STA	WSYNC
+    135  f21d					      REPEND
+    136  f21f		       85 02		      STA	WSYNC
+    135  f21f					      REPEND
+    136  f221		       85 02		      STA	WSYNC
+    135  f221					      REPEND
+    136  f223		       85 02		      STA	WSYNC
+    135  f223					      REPEND
+    136  f225		       85 02		      STA	WSYNC
+    135  f225					      REPEND
+    136  f227		       85 02		      STA	WSYNC
+    135  f227					      REPEND
+    136  f229		       85 02		      STA	WSYNC
+    135  f229					      REPEND
+    136  f22b		       85 02		      STA	WSYNC
+    135  f22b					      REPEND
+    136  f22d		       85 02		      STA	WSYNC
+    135  f22d					      REPEND
+    136  f22f		       85 02		      STA	WSYNC
+    135  f22f					      REPEND
+    136  f231		       85 02		      STA	WSYNC
+    135  f231					      REPEND
+    136  f233		       85 02		      STA	WSYNC
+    135  f233					      REPEND
+    136  f235		       85 02		      STA	WSYNC
+    135  f235					      REPEND
+    136  f237		       85 02		      STA	WSYNC
+    135  f237					      REPEND
+    136  f239		       85 02		      STA	WSYNC
+    135  f239					      REPEND
+    136  f23b		       85 02		      STA	WSYNC
+    135  f23b					      REPEND
+    136  f23d		       85 02		      STA	WSYNC
+    135  f23d					      REPEND
+    136  f23f		       85 02		      STA	WSYNC
+    135  f23f					      REPEND
+    136  f241		       85 02		      STA	WSYNC
+    135  f241					      REPEND
+    136  f243		       85 02		      STA	WSYNC
+    135  f243					      REPEND
+    136  f245		       85 02		      STA	WSYNC
+    135  f245					      REPEND
+    136  f247		       85 02		      STA	WSYNC
+    135  f247					      REPEND
+    136  f249		       85 02		      STA	WSYNC
+    135  f249					      REPEND
+    136  f24b		       85 02		      STA	WSYNC
+    135  f24b					      REPEND
+    136  f24d		       85 02		      STA	WSYNC
+    137  f24f					      REPEND
+    138  f24f
+    139  f24f							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    140  f24f							;; joystick input test for P0 up/down/left/right
+    141  f24f							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    142  f24f				   CheckP0Up
+    143  f24f		       a9 10		      LDA	#%00010000
+    144  f251		       2c 80 02 	      BIT	SWCHA
+    145  f254		       d0 02		      BNE	CheckP0Down
+    146  f256		       e6 80		      INC	P0XPos
+    147  f258
+    148  f258				   CheckP0Down
+    149  f258		       a9 20		      LDA	#%00100000
+    150  f25a		       2c 80 02 	      BIT	SWCHA
+    151  f25d		       d0 02		      BNE	CheckP0Left
+    152  f25f		       c6 80		      DEC	P0XPos
+    153  f261
+    154  f261				   CheckP0Left
+    155  f261		       a9 40		      LDA	#%01000000
+    156  f263		       2c 80 02 	      BIT	SWCHA
+    157  f266		       d0 02		      BNE	CheckP0Right
+    158  f268		       c6 80		      DEC	P0XPos
+    159  f26a
+    160  f26a				   CheckP0Right
+    161  f26a		       a9 80		      LDA	#%10000000
+    162  f26c		       2c 80 02 	      BIT	SWCHA
+    163  f26f		       d0 02		      BNE	NoInput
+    164  f271		       e6 80		      INC	P0XPos
+    165  f273
+    166  f273				   NoInput
+    167  f273							; fallback when no input was performed
+    168  f273
+    169  f273							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    170  f273							;; loop to next frame
+    171  f273							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    172  f273		       4c 17 f0 	      JMP	StartFrame
+    173  f276
+    174  f276							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    175  f276							;; lookup table for player graphics bitmap
+    176  f276							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    177  f276				   P0Bitmap
+    178  f276		       00		      byte.b	#%00000000
+    179  f277		       14		      byte.b	#%00010100
+    180  f278		       14		      byte.b	#%00010100
+    181  f279		       14		      byte.b	#%00010100
+    182  f27a		       14		      byte.b	#%00010100
+    183  f27b		       14		      byte.b	#%00010100
+    184  f27c		       1c		      byte.b	#%00011100
+    185  f27d		       5d		      byte.b	#%01011101
+    186  f27e		       5d		      byte.b	#%01011101
+    187  f27f		       5d		      byte.b	#%01011101
+    188  f280		       5d		      byte.b	#%01011101
+    189  f281		       7f		      byte.b	#%01111111
+    190  f282		       3e		      byte.b	#%00111110
+    191  f283		       10		      byte.b	#%00010000
+    192  f284		       1c		      byte.b	#%00011100
+    193  f285		       1c		      byte.b	#%00011100
+    194  f286		       1c		      byte.b	#%00011100
+    195  f287
+    196  f287							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    197  f287							;; lookup table for the player colors
+    198  f287							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    199  f287				   P0Color
+    200  f287		       00		      byte.b	#$00
+    201  f288		       f6		      byte.b	#$F6
+    202  f289		       f2		      byte.b	#$F2
+    203  f28a		       f2		      byte.b	#$F2
+    204  f28b		       f2		      byte.b	#$F2
+    205  f28c		       f2		      byte.b	#$F2
+    206  f28d		       f2		      byte.b	#$F2
+    207  f28e		       c2		      byte.b	#$C2
+    208  f28f		       c2		      byte.b	#$C2
+    209  f290		       c2		      byte.b	#$C2
+    210  f291		       c2		      byte.b	#$C2
+    211  f292		       c2		      byte.b	#$C2
+    212  f293		       c2		      byte.b	#$C2
+    213  f294		       3e		      byte.b	#$3E
+    214  f295		       3e		      byte.b	#$3E
+    215  f296		       3e		      byte.b	#$3E
+    216  f297		       24		      byte.b	#$24
+    217  f298
+    218  f298							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    219  f298							;; complete ROM size adding reset addresses at $FFFC
+    220  f298							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    221  fffc					      ORG	$FFFC
+    222  fffc		       00 f0		      .word.w	Reset
+    223  fffe		       00 f0		      .word.w	Reset
