@@ -3,8 +3,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; include required files with VCS register memory mapping and macros
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    INCLUDE "macro.h"
     INCLUDE "vcs.h"
+    INCLUDE "macro.h"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; declare the variables strating from memory address $80  
@@ -16,6 +16,16 @@ JetXPos         byte            ; player 0 x-position
 JetYPos         byte            ; player 0 y-position
 BomberXPos      byte            ; player 1 X-position
 BomberYPos      byte            ; player 1 y-position
+JetSpritePtr    word            ; pointer to player0 sprite lookup table
+JetColorPtr     word            ; pointer to player0 color lookup table
+BomberSpritePtr word            ; pointer to player1 sprite lookup table
+BomberColorPtr  word            ; pointer to player1 color lookup table
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; define constants
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+JET_HEIGHT = 9                  ; player0 sprite height(# rows in lookup  table)
+BOMBER_HEIGHT = 9               ; player1 sprite height(# rows in lookup table)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; start our ROM code at memory address $F000
@@ -34,6 +44,35 @@ Reset:
 
     LDA #60
     STA JetXPos                 ; JetXPos = 60
+
+    LDA #83
+    STA BomberYPos              ; BomberYPos = 83
+
+    LDA #54
+    STA BomberXPos              ; BomberXPos = 54 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; initialize the pointers to correct lookup table address
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    LDA #<JetSprite
+    STA JetSpritePtr            ; low-byte pointer for jet sprite lookup table
+    LDA #>JetSprite
+    STA JetSpritePtr+1          ; hi-byte pointer for jet sprite lookup table
+
+    LDA #<JetColor
+    STA JetColorPtr             ; low-byte pointer for jet color lookup table
+    LDA #>JetColor
+    STA JetColorPtr+1           ; hi-byte pointer for jet color lookup table
+
+    LDA #<BomberSprite
+    STA BomberSpritePtr         ; low-byte pointer for bomber sprite lookup table
+    LDA #>BomberSprite
+    STA BomberSprite+1          ; hi-byte pointer for bomber sprite lookup table
+
+    LDA #<BomberColor
+    STA BomberColorPtr          ; low-byte pointer for bomber color lookup table
+    LDA #>BomberColor
+    STA BomberColorPtr+1        ; hi-byte pointer for bomber color lookup table
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; start the main display loop and frame rendering
@@ -99,6 +138,75 @@ GameLineLoop:
 ;; loop back to start a brand new frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     JMP StartFrame              ; continue to dispay the next frame
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; declare ROM lookup tables
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+JetSprite:
+    .byte #%00000000         ;
+    .byte #%00010100         ;   # #
+    .byte #%01111111         ; #######
+    .byte #%00111110         ;  #####
+    .byte #%00011100         ;   ###
+    .byte #%00011100         ;   ###
+    .byte #%00001000         ;    #
+    .byte #%00001000         ;    #
+    .byte #%00001000         ;    #
+
+JetSpriteTurn:
+    .byte #%00000000         ;
+    .byte #%00001000         ;    #
+    .byte #%00111110         ;  #####
+    .byte #%00011100         ;   ###
+    .byte #%00011100         ;   ###
+    .byte #%00011100         ;   ###
+    .byte #%00001000         ;    #
+    .byte #%00001000         ;    #
+    .byte #%00001000         ;    #
+
+BomberSprite:
+    .byte #%00000000         ;
+    .byte #%00001000         ;    #
+    .byte #%00001000         ;    #
+    .byte #%00101010         ;  # # #
+    .byte #%00111110         ;  #####
+    .byte #%01111111         ; #######
+    .byte #%00101010         ;  # # #
+    .byte #%00001000         ;    #
+    .byte #%00011100         ;   ###
+
+JetColor:
+    .byte #$00
+    .byte #$FE
+    .byte #$0C
+    .byte #$0E
+    .byte #$0E
+    .byte #$04
+    .byte #$BA
+    .byte #$0E
+    .byte #$08
+
+JetColorTurn:
+    .byte #$00
+    .byte #$FE
+    .byte #$0C
+    .byte #$0E
+    .byte #$0E
+    .byte #$04
+    .byte #$0E
+    .byte #$0E
+    .byte #$08
+
+BomberColor:
+    .byte #$00
+    .byte #$32
+    .byte #$32
+    .byte #$0E
+    .byte #$40
+    .byte #$40
+    .byte #$40
+    .byte #$40
+    .byte #$40
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; complete ROM size with exactly 4KB
