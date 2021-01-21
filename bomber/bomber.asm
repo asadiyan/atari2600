@@ -67,7 +67,7 @@ Reset:
     LDA #<BomberSprite
     STA BomberSpritePtr         ; low-byte pointer for bomber sprite lookup table
     LDA #>BomberSprite
-    STA BomberSprite+1          ; hi-byte pointer for bomber sprite lookup table
+    STA BomberSpritePtr+1          ; hi-byte pointer for bomber sprite lookup table
 
     LDA #<BomberColor
     STA BomberColorPtr          ; low-byte pointer for bomber color lookup table
@@ -96,7 +96,7 @@ StartFrame:
     STA VBLANK                  ; turn off VBLANK
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; display the 192 visible scanlines 
+;; display the 96 visible scanlines (because 2-line kernel) 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 GameVisibleLines:
     LDA #$84
@@ -117,9 +117,42 @@ GameVisibleLines:
     LDA #0                      
     STA PF2                     ; setting PF2 bit pattern
 
-    LDX #192                    ; x counts the umber of remaining scanlines
+    LDX #96                     ; x counts the umber of remaining scanlines
 GameLineLoop:
+AreWeInsideJetSprite:
+    TXA                         ; transfer X to A 
+    SEC                         ; make sure the carry flag is set before subtraction
+    SBC JetYPos                 ; subtract sprite Y-cordinate
+    CMP JET_HEIGHT              ; are we inside the sprite height bounds?
+    BCC DrawSpriteP0            ; if the result < sprite height then call the draw routine
+    LDA #0                      ; else, set lookup table index to zero
+DrawSpriteP0:
+    TAY                         ; load Y so we can work with the pointer
+    LDA (JetSpritePtr),Y        ; load player0 bitmap data from lookup table 
+    STA WSYNC                   ; wait for scanline
+    STA GRP0                    ; set graphics for player0
+    LDA (JetColorPtr),Y         ; load player color from lookup table
+    STA COLUP0                  ; set color of player0
+
+AreWeInsideBomberSprite:
+    TXA
+    SEC
+    SBC BomberYPos
+    CMP BOMBER_HEIGHT
+    BCC DrawSpriteP1
+    LDA #0
+DrawSpriteP1:
+    TAY
+
+    LDA #%00000101
+    STA NUSIZ1                  ; stretch player 1 sprite 
+
+    LDA (BomberSpritePtr),Y 
     STA WSYNC
+    STA GRP1
+    LDA (BomberColorPtr),Y
+    STA COLUP1
+
     DEX                         ; X--
     BNE GameLineLoop            ; repeat next main game scanline until finished
 
