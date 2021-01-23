@@ -182,6 +182,35 @@ DrawSpriteP1:
     STA VBLANK                  ; turn oof VBLANK
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; process joystick input for player0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+CheckP0Up:
+    LDA #%00010000              ; player0 joystick up
+    BIT SWCHA
+    BNE CheckP0Down             ; if bit pattern doesnt match, bypass Up block
+    INC JetYPos
+
+CheckP0Down:
+    LDA #%00100000              ; player0 joystick down
+    BIT SWCHA
+    BNE CheckP0Left             ; if bit pattern doesnt match, bypass Down block
+    DEC JetYPos
+
+CheckP0Left:
+    LDA #%01000000              ; player0 joystick left
+    BIT SWCHA
+    BNE CheckP0Right            ; if bit pattern doesnt match, bypass Left block
+    DEC JetXPos
+
+CheckP0Right:
+    LDA #%10000000              ; player0 joystick Right
+    BIT SWCHA
+    BNE EndInputCheck           ; if bit pattern doesnt match, bypass Right block
+    INC JetXPos
+
+EndInputCheck:                  ; fallback when no input was performed 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; loop back to start a brand new frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     JMP StartFrame              ; continue to dispay the next frame
