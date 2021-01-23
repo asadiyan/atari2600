@@ -20,6 +20,7 @@ JetSpritePtr    word            ; pointer to player0 sprite lookup table
 JetColorPtr     word            ; pointer to player0 color lookup table
 BomberSpritePtr word            ; pointer to player1 sprite lookup table
 BomberColorPtr  word            ; pointer to player1 color lookup table
+JetAnimOffset   byte            ; player0 sprite frame offset for animation
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; define constants
@@ -141,6 +142,9 @@ AreWeInsideJetSprite:
     BCC DrawSpriteP0            ; if the result < sprite height then call the draw routine
     LDA #0                      ; else, set lookup table index to zero
 DrawSpriteP0:
+    CLC                         ; clear carry flag before addition
+    ADC JetAnimOffset           ; jump to the correct sprite frame address in memory
+
     TAY                         ; load Y so we can work with the pointer
     LDA (JetSpritePtr),Y        ; load player0 bitmap data from lookup table 
     STA WSYNC                   ; wait for scanline
@@ -170,6 +174,8 @@ DrawSpriteP1:
     DEX                         ; X--
     BNE GameLineLoop            ; repeat next main game scanline until finished
 
+    LDA #0
+    STA JetAnimOffset
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; display overscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -189,24 +195,32 @@ CheckP0Up:
     BIT SWCHA
     BNE CheckP0Down             ; if bit pattern doesnt match, bypass Up block
     INC JetYPos
+    LDA #0
+    STA JetAnimOffset           ; reset animation frame to first frame
 
 CheckP0Down:
     LDA #%00100000              ; player0 joystick down
     BIT SWCHA
     BNE CheckP0Left             ; if bit pattern doesnt match, bypass Down block
     DEC JetYPos
+    LDA #0
+    STA JetAnimOffset           ; reset animation frame to first frame
 
 CheckP0Left:
     LDA #%01000000              ; player0 joystick left
     BIT SWCHA
     BNE CheckP0Right            ; if bit pattern doesnt match, bypass Left block
     DEC JetXPos
+    LDA JET_HEIGHT              ; 9
+    STA JetAnimOffset           ; set animation offset to second frame
 
 CheckP0Right:
     LDA #%10000000              ; player0 joystick Right
     BIT SWCHA
     BNE EndInputCheck           ; if bit pattern doesnt match, bypass Right block
     INC JetXPos
+    LDA JET_HEIGHT              ; 9
+    STA JetAnimOffset           ; set animation offset to second frame
 
 EndInputCheck:                  ; fallback when no input was performed 
 

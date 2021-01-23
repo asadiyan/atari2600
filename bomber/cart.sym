@@ -1,7 +1,7 @@
 --- Symbol List (sorted by symbol)
 0.FREE_BYTES             0000                  
 1.CLEAR_STACK            f006              (R )
-AreWeInsideBomberSprite  f0d8                  
+AreWeInsideBomberSprite  f0db                  
 AreWeInsideJetSprite     f0c3                  
 AUDC0                    0015                  
 AUDC1                    0016                  
@@ -10,16 +10,16 @@ AUDF1                    0018
 AUDV0                    0019                  
 AUDV1                    001a                  
 BOMBER_HEIGHT            0009              (R )
-BomberColor              f1a0              (R )
+BomberColor              f1b7              (R )
 BomberColorPtr           008a              (R )
-BomberSprite             f185              (R )
+BomberSprite             f19c              (R )
 BomberSpritePtr          0088              (R )
 BomberXPos               0082              (R )
 BomberYPos               0083              (R )
-CheckP0Down              f141              (R )
-CheckP0Left              f14a              (R )
-CheckP0Right             f153              (R )
-CheckP0Up                f138                  
+CheckP0Down              f14c              (R )
+CheckP0Left              f159              (R )
+CheckP0Right             f166              (R )
+CheckP0Up                f13f                  
 COLUBK                   0009              (R )
 COLUP0                   0006              (R )
 COLUP1                   0007              (R )
@@ -34,13 +34,13 @@ CXM1P                    0001
 CXP0FB                   0002                  
 CXP1FB                   0003                  
 CXPPMM                   0007                  
-Div15Loop                f162              (R )
+Div15Loop                f179              (R )
 DrawSpriteP0             f0cd              (R )
-DrawSpriteP1             f0e2              (R )
+DrawSpriteP1             f0e5              (R )
 ENABL                    001f                  
 ENAM0                    001d                  
 ENAM1                    001e                  
-EndInputCheck            f15c              (R )
+EndInputCheck            f173              (R )
 GameLineLoop             f0c3              (R )
 GameVisibleLines         f0a9                  
 GRP0                     001b              (R )
@@ -60,12 +60,13 @@ INPT4                    000c
 INPT5                    000d                  
 INTIM                    0284                  
 JET_HEIGHT               0009              (R )
-JetColor                 f18e              (R )
+JetAnimOffset            008c              (R )
+JetColor                 f1a5              (R )
 JetColorPtr              0086              (R )
-JetColorTurn             f197                  
-JetSprite                f173              (R )
+JetColorTurn             f1ae                  
+JetSprite                f18a              (R )
 JetSpritePtr             0084              (R )
-JetSpriteTurn            f17c                  
+JetSpriteTurn            f193                  
 JetXPos                  0080              (R )
 JetYPos                  0081              (R )
 NUSIZ0                   0004                  
@@ -84,7 +85,7 @@ RESMP1                   0029
 RESP0                    0010              (R )
 RESP1                    0011                  
 RSYNC                    0003                  
-SetObjectXPos            f15f              (R )
+SetObjectXPos            f176              (R )
 StartFrame               f03b              (R )
 SWACNT                   0281                  
 SWBCNT                   0283                  
