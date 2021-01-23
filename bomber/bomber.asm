@@ -42,7 +42,7 @@ Reset:
     LDA #10
     STA JetYPos                 ; JetYPos = 10
 
-    LDA #60
+    LDA #0
     STA JetXPos                 ; JetXPos = 60
 
     LDA #83
@@ -78,6 +78,20 @@ Reset:
 ;; start the main display loop and frame rendering
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 StartFrame:
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; calculations and tasks preformed in the pre-VBLANK
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    LDA JetXPos
+    LDY #0                      ; loading my register with the code of my object witch is player0 
+    JSR SetObjectXPos           ; jump to my subrutine
+
+    LDA BomberXPos
+    LDY #1                      ; bomber object code is 1 becouse it is player1
+    JSR SetObjectXPos 
+
+    STA WSYNC
+    STA HMOVE                   ; apply the horizontal offsets previously set
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; display VSYNC and VBLANK
@@ -171,6 +185,27 @@ DrawSpriteP1:
 ;; loop back to start a brand new frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     JMP StartFrame              ; continue to dispay the next frame
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; subroutine to handle object horizontal position with fine offset
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; A is the target x-cordinate position in pixels of our object 
+;; Y is the object type (0:player0, 1:player1 2:missile0  3:missile1 4:ball)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+SetObjectXPos SUBROUTINE
+    STA WSYNC                   ; start a fresh new scanline
+    SEC                         ; make sure carry flag is set before subtraction
+Div15Loop:
+    SBC #15                     ; subtract 15 from accumulator
+    BCS Div15Loop               ; loop until carry-flag is clear
+    EOR #7                      ; exclusive or 7 with register A (handle offset range from -8 to 7)
+    ASL
+    ASL
+    ASL
+    ASL                         ; four shift left to get only the top four bits
+    STA HMP0,Y                  ; store the fine offset to the correct HMxx
+    STA RESP0,Y                 ; fix object position in 15-step increment
+    RTS
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; declare ROM lookup tables

@@ -1,8 +1,8 @@
 --- Symbol List (sorted by symbol)
 0.FREE_BYTES             0000                  
 1.CLEAR_STACK            f006              (R )
-AreWeInsideBomberSprite  f0c6                  
-AreWeInsideJetSprite     f0b1                  
+AreWeInsideBomberSprite  f0d8                  
+AreWeInsideJetSprite     f0c3                  
 AUDC0                    0015                  
 AUDC1                    0016                  
 AUDF0                    0017                  
@@ -10,9 +10,9 @@ AUDF1                    0018
 AUDV0                    0019                  
 AUDV1                    001a                  
 BOMBER_HEIGHT            0009              (R )
-BomberColor              f156              (R )
+BomberColor              f17c              (R )
 BomberColorPtr           008a              (R )
-BomberSprite             f13b              (R )
+BomberSprite             f161              (R )
 BomberSpritePtr          0088              (R )
 BomberXPos               0082              (R )
 BomberYPos               0083              (R )
@@ -30,21 +30,22 @@ CXM1P                    0001
 CXP0FB                   0002                  
 CXP1FB                   0003                  
 CXPPMM                   0007                  
-DrawSpriteP0             f0bb              (R )
-DrawSpriteP1             f0d0              (R )
+Div15Loop                f13e              (R )
+DrawSpriteP0             f0cd              (R )
+DrawSpriteP1             f0e2              (R )
 ENABL                    001f                  
 ENAM0                    001d                  
 ENAM1                    001e                  
-GameLineLoop             f0b1              (R )
-GameVisibleLines         f097                  
+GameLineLoop             f0c3              (R )
+GameVisibleLines         f0a9                  
 GRP0                     001b              (R )
 GRP1                     001c              (R )
 HMBL                     0024                  
 HMCLR                    002b                  
 HMM0                     0022                  
 HMM1                     0023                  
-HMOVE                    002a                  
-HMP0                     0020                  
+HMOVE                    002a              (R )
+HMP0                     0020              (R )
 HMP1                     0021                  
 INPT0                    0008                  
 INPT1                    0009                  
@@ -54,12 +55,12 @@ INPT4                    000c
 INPT5                    000d                  
 INTIM                    0284                  
 JET_HEIGHT               0009              (R )
-JetColor                 f144              (R )
+JetColor                 f16a              (R )
 JetColorPtr              0086              (R )
-JetColorTurn             f14d                  
-JetSprite                f129              (R )
+JetColorTurn             f173                  
+JetSprite                f14f              (R )
 JetSpritePtr             0084              (R )
-JetSpriteTurn            f132                  
+JetSpriteTurn            f158                  
 JetXPos                  0080              (R )
 JetYPos                  0081              (R )
 NUSIZ0                   0004                  
@@ -75,9 +76,10 @@ RESM0                    0012
 RESM1                    0013                  
 RESMP0                   0028                  
 RESMP1                   0029                  
-RESP0                    0010                  
+RESP0                    0010              (R )
 RESP1                    0011                  
 RSYNC                    0003                  
+SetObjectXPos            f13b              (R )
 StartFrame               f03b              (R )
 SWACNT                   0281                  
 SWBCNT                   0283                  
