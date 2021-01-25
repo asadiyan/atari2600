@@ -434,22 +434,22 @@
      55  f01b							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
      56  f01b							;; initialize the pointers to correct lookup table address
      57  f01b							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-     58  f01b		       a9 8a		      LDA	#<JetSprite
+     58  f01b		       a9 9a		      LDA	#<JetSprite
      59  f01d		       85 84		      STA	JetSpritePtr	; low-byte pointer for jet sprite lookup table
      60  f01f		       a9 f1		      LDA	#>JetSprite
      61  f021		       85 85		      STA	JetSpritePtr+1	; hi-byte pointer for jet sprite lookup table
      62  f023
-     63  f023		       a9 a5		      LDA	#<JetColor
+     63  f023		       a9 b5		      LDA	#<JetColor
      64  f025		       85 86		      STA	JetColorPtr	; low-byte pointer for jet color lookup table
      65  f027		       a9 f1		      LDA	#>JetColor
      66  f029		       85 87		      STA	JetColorPtr+1	; hi-byte pointer for jet color lookup table
      67  f02b
-     68  f02b		       a9 9c		      LDA	#<BomberSprite
+     68  f02b		       a9 ac		      LDA	#<BomberSprite
      69  f02d		       85 88		      STA	BomberSpritePtr	; low-byte pointer for bomber sprite lookup table
      70  f02f		       a9 f1		      LDA	#>BomberSprite
      71  f031		       85 89		      STA	BomberSpritePtr+1	; hi-byte pointer for bomber sprite lookup table
      72  f033
-     73  f033		       a9 b7		      LDA	#<BomberColor
+     73  f033		       a9 c7		      LDA	#<BomberColor
      74  f035		       85 8a		      STA	BomberColorPtr	; low-byte pointer for bomber color lookup table
      75  f037		       a9 f1		      LDA	#>BomberColor
      76  f039		       85 8b		      STA	BomberColorPtr+1	; hi-byte pointer for bomber color lookup table
@@ -464,11 +464,11 @@
      85  f03b							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
      86  f03b		       a5 80		      LDA	JetXPos
      87  f03d		       a0 00		      LDY	#0	; loading my register with the code of my object witch is player0 
-     88  f03f		       20 76 f1 	      JSR	SetObjectXPos	; jump to my subrutine
+     88  f03f		       20 86 f1 	      JSR	SetObjectXPos	; jump to my subrutine
      89  f042
      90  f042		       a5 82		      LDA	BomberXPos
      91  f044		       a0 01		      LDY	#1	; bomber object code is 1 becouse it is player1
-     92  f046		       20 76 f1 	      JSR	SetObjectXPos
+     92  f046		       20 86 f1 	      JSR	SetObjectXPos
      93  f049
      94  f049		       85 02		      STA	WSYNC
      95  f04b		       85 2a		      STA	HMOVE	; apply the horizontal offsets previously set
@@ -630,7 +630,7 @@
     175  f0f5		       d0 cc		      BNE	GameLineLoop	; repeat next main game scanline until finished
     176  f0f7
     177  f0f7		       a9 00		      LDA	#0
-    178  f0f9		       85 8c		      STA	JetAnimOffset
+    178  f0f9		       85 8c		      STA	JetAnimOffset	; reset jet animation frame to zero each frame 
     179  f0fb							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     180  f0fb							;; display overscan
     181  f0fb							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -738,103 +738,121 @@
     225  f173				   EndInputCheck		; fallback when no input was performed 
     226  f173
     227  f173							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    228  f173							;; loop back to start a brand new frame
+    228  f173							;; calculation to update position for next fram
     229  f173							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    230  f173		       4c 3b f0 	      JMP	StartFrame	; continue to dispay the next frame
-    231  f176
-    232  f176							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    233  f176							;; subroutine to handle object horizontal position with fine offset
-    234  f176							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    235  f176							;; A is the target x-cordinate position in pixels of our object 
-    236  f176							;; Y is the object type (0:player0, 1:player1 2:missile0  3:missile1 4:ball)
-    237  f176							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    238  f176				   SetObjectXPos SUBROUTINE
-    239  f176		       85 02		      STA	WSYNC	; start a fresh new scanline
-    240  f178		       38		      SEC		; make sure carry flag is set before subtraction
-    241  f179				   Div15Loop
-    242  f179		       e9 0f		      SBC	#15	; subtract 15 from accumulator
-    243  f17b		       b0 fc		      BCS	Div15Loop	; loop until carry-flag is clear
-    244  f17d		       49 07		      EOR	#7	; exclusive or 7 with register A (handle offset range from -8 to 7)
-    245  f17f		       0a		      ASL
-    246  f180		       0a		      ASL
-    247  f181		       0a		      ASL
-    248  f182		       0a		      ASL		; four shift left to get only the top four bits
-    249  f183		       99 20 00 	      STA	HMP0,Y	; store the fine offset to the correct HMxx
-    250  f186		       99 10 00 	      STA	RESP0,Y	; fix object position in 15-step increment
-    251  f189		       60		      RTS
-    252  f18a
-    253  f18a							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    254  f18a							;; declare ROM lookup tables
-    255  f18a							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    256  f18a				   JetSprite
-    257  f18a		       00		      .byte.b	#%00000000	;
-    258  f18b		       14		      .byte.b	#%00010100	;   # #
-    259  f18c		       7f		      .byte.b	#%01111111	; #######
-    260  f18d		       3e		      .byte.b	#%00111110	;  #####
-    261  f18e		       1c		      .byte.b	#%00011100	;   ###
-    262  f18f		       1c		      .byte.b	#%00011100	;   ###
-    263  f190		       08		      .byte.b	#%00001000	;    #
-    264  f191		       08		      .byte.b	#%00001000	;    #
-    265  f192		       08		      .byte.b	#%00001000	;    #
-    266  f193
-    267  f193				   JetSpriteTurn
-    268  f193		       00		      .byte.b	#%00000000	;
-    269  f194		       08		      .byte.b	#%00001000	;    #
-    270  f195		       3e		      .byte.b	#%00111110	;  #####
-    271  f196		       1c		      .byte.b	#%00011100	;   ###
-    272  f197		       1c		      .byte.b	#%00011100	;   ###
-    273  f198		       1c		      .byte.b	#%00011100	;   ###
-    274  f199		       08		      .byte.b	#%00001000	;    #
-    275  f19a		       08		      .byte.b	#%00001000	;    #
-    276  f19b		       08		      .byte.b	#%00001000	;    #
-    277  f19c
-    278  f19c				   BomberSprite
-    279  f19c		       00		      .byte.b	#%00000000	;
-    280  f19d		       08		      .byte.b	#%00001000	;    #
-    281  f19e		       08		      .byte.b	#%00001000	;    #
-    282  f19f		       2a		      .byte.b	#%00101010	;  # # #
-    283  f1a0		       3e		      .byte.b	#%00111110	;  #####
-    284  f1a1		       7f		      .byte.b	#%01111111	; #######
-    285  f1a2		       2a		      .byte.b	#%00101010	;  # # #
-    286  f1a3		       08		      .byte.b	#%00001000	;    #
-    287  f1a4		       1c		      .byte.b	#%00011100	;   ###
-    288  f1a5
-    289  f1a5				   JetColor
-    290  f1a5		       00		      .byte.b	#$00
-    291  f1a6		       fe		      .byte.b	#$FE
-    292  f1a7		       0c		      .byte.b	#$0C
-    293  f1a8		       0e		      .byte.b	#$0E
-    294  f1a9		       0e		      .byte.b	#$0E
-    295  f1aa		       04		      .byte.b	#$04
-    296  f1ab		       ba		      .byte.b	#$BA
-    297  f1ac		       0e		      .byte.b	#$0E
-    298  f1ad		       08		      .byte.b	#$08
-    299  f1ae
-    300  f1ae				   JetColorTurn
-    301  f1ae		       00		      .byte.b	#$00
-    302  f1af		       fe		      .byte.b	#$FE
-    303  f1b0		       0c		      .byte.b	#$0C
-    304  f1b1		       0e		      .byte.b	#$0E
-    305  f1b2		       0e		      .byte.b	#$0E
-    306  f1b3		       04		      .byte.b	#$04
-    307  f1b4		       0e		      .byte.b	#$0E
-    308  f1b5		       0e		      .byte.b	#$0E
-    309  f1b6		       08		      .byte.b	#$08
-    310  f1b7
-    311  f1b7				   BomberColor
-    312  f1b7		       00		      .byte.b	#$00
-    313  f1b8		       32		      .byte.b	#$32
-    314  f1b9		       32		      .byte.b	#$32
-    315  f1ba		       0e		      .byte.b	#$0E
-    316  f1bb		       40		      .byte.b	#$40
-    317  f1bc		       40		      .byte.b	#$40
-    318  f1bd		       40		      .byte.b	#$40
-    319  f1be		       40		      .byte.b	#$40
-    320  f1bf		       40		      .byte.b	#$40
-    321  f1c0
-    322  f1c0							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    323  f1c0							;; complete ROM size with exactly 4KB
-    324  f1c0							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    325  fffc					      ORG	$FFFC	; move to position $FFFC in memory
-    326  fffc		       00 f0		      word.w	Reset	; write 2 bytes with the program reset address
-    327  fffe		       00 f0		      word.w	Reset	; write 2 bytes with the interruption vector
+    230  f173				   UpdateBomberPosition
+    231  f173		       a5 83		      LDA	BomberYPos
+    232  f175		       18		      CLC
+    233  f176		       c9 00		      CMP	#0	; compare bomber Y-position with zero
+    234  f178		       30 05		      BMI	ResetBomberPosition	; if it is < 0 then reset Y-position to the top 
+    235  f17a		       c6 83		      DEC	BomberYPos	; else, decrement enemy Y-position for next frame
+    236  f17c		       4c 83 f1 	      JMP	EndPositionUpdate
+    237  f17f				   ResetBomberPosition
+    238  f17f		       a9 60		      LDA	#96
+    239  f181		       85 83		      STA	BomberYPos
+    240  f183							; TODO: set bomber X position to random number here
+    241  f183
+    242  f183				   EndPositionUpdate		; fallback for the position update code
+    243  f183
+    244  f183
+    245  f183							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    246  f183							;; loop back to start a brand new frame
+    247  f183							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    248  f183		       4c 3b f0 	      JMP	StartFrame	; continue to dispay the next frame
+    249  f186
+    250  f186							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    251  f186							;; subroutine to handle object horizontal position with fine offset
+    252  f186							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    253  f186							;; A is the target x-cordinate position in pixels of our object 
+    254  f186							;; Y is the object type (0:player0, 1:player1 2:missile0  3:missile1 4:ball)
+    255  f186							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    256  f186				   SetObjectXPos SUBROUTINE
+    257  f186		       85 02		      STA	WSYNC	; start a fresh new scanline
+    258  f188		       38		      SEC		; make sure carry flag is set before subtraction
+    259  f189				   Div15Loop
+    260  f189		       e9 0f		      SBC	#15	; subtract 15 from accumulator
+    261  f18b		       b0 fc		      BCS	Div15Loop	; loop until carry-flag is clear
+    262  f18d		       49 07		      EOR	#7	; exclusive or 7 with register A (handle offset range from -8 to 7)
+    263  f18f		       0a		      ASL
+    264  f190		       0a		      ASL
+    265  f191		       0a		      ASL
+    266  f192		       0a		      ASL		; four shift left to get only the top four bits
+    267  f193		       99 20 00 	      STA	HMP0,Y	; store the fine offset to the correct HMxx
+    268  f196		       99 10 00 	      STA	RESP0,Y	; fix object position in 15-step increment
+    269  f199		       60		      RTS
+    270  f19a
+    271  f19a							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    272  f19a							;; declare ROM lookup tables
+    273  f19a							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    274  f19a				   JetSprite
+    275  f19a		       00		      .byte.b	#%00000000	;
+    276  f19b		       14		      .byte.b	#%00010100	;   # #
+    277  f19c		       7f		      .byte.b	#%01111111	; #######
+    278  f19d		       3e		      .byte.b	#%00111110	;  #####
+    279  f19e		       1c		      .byte.b	#%00011100	;   ###
+    280  f19f		       1c		      .byte.b	#%00011100	;   ###
+    281  f1a0		       08		      .byte.b	#%00001000	;    #
+    282  f1a1		       08		      .byte.b	#%00001000	;    #
+    283  f1a2		       08		      .byte.b	#%00001000	;    #
+    284  f1a3
+    285  f1a3				   JetSpriteTurn
+    286  f1a3		       00		      .byte.b	#%00000000	;
+    287  f1a4		       08		      .byte.b	#%00001000	;    #
+    288  f1a5		       3e		      .byte.b	#%00111110	;  #####
+    289  f1a6		       1c		      .byte.b	#%00011100	;   ###
+    290  f1a7		       1c		      .byte.b	#%00011100	;   ###
+    291  f1a8		       1c		      .byte.b	#%00011100	;   ###
+    292  f1a9		       08		      .byte.b	#%00001000	;    #
+    293  f1aa		       08		      .byte.b	#%00001000	;    #
+    294  f1ab		       08		      .byte.b	#%00001000	;    #
+    295  f1ac
+    296  f1ac				   BomberSprite
+    297  f1ac		       00		      .byte.b	#%00000000	;
+    298  f1ad		       08		      .byte.b	#%00001000	;    #
+    299  f1ae		       08		      .byte.b	#%00001000	;    #
+    300  f1af		       2a		      .byte.b	#%00101010	;  # # #
+    301  f1b0		       3e		      .byte.b	#%00111110	;  #####
+    302  f1b1		       7f		      .byte.b	#%01111111	; #######
+    303  f1b2		       2a		      .byte.b	#%00101010	;  # # #
+    304  f1b3		       08		      .byte.b	#%00001000	;    #
+    305  f1b4		       1c		      .byte.b	#%00011100	;   ###
+    306  f1b5
+    307  f1b5				   JetColor
+    308  f1b5		       00		      .byte.b	#$00
+    309  f1b6		       fe		      .byte.b	#$FE
+    310  f1b7		       0c		      .byte.b	#$0C
+    311  f1b8		       0e		      .byte.b	#$0E
+    312  f1b9		       0e		      .byte.b	#$0E
+    313  f1ba		       04		      .byte.b	#$04
+    314  f1bb		       ba		      .byte.b	#$BA
+    315  f1bc		       0e		      .byte.b	#$0E
+    316  f1bd		       08		      .byte.b	#$08
+    317  f1be
+    318  f1be				   JetColorTurn
+    319  f1be		       00		      .byte.b	#$00
+    320  f1bf		       fe		      .byte.b	#$FE
+    321  f1c0		       0c		      .byte.b	#$0C
+    322  f1c1		       0e		      .byte.b	#$0E
+    323  f1c2		       0e		      .byte.b	#$0E
+    324  f1c3		       04		      .byte.b	#$04
+    325  f1c4		       0e		      .byte.b	#$0E
+    326  f1c5		       0e		      .byte.b	#$0E
+    327  f1c6		       08		      .byte.b	#$08
+    328  f1c7
+    329  f1c7				   BomberColor
+    330  f1c7		       00		      .byte.b	#$00
+    331  f1c8		       32		      .byte.b	#$32
+    332  f1c9		       32		      .byte.b	#$32
+    333  f1ca		       0e		      .byte.b	#$0E
+    334  f1cb		       40		      .byte.b	#$40
+    335  f1cc		       40		      .byte.b	#$40
+    336  f1cd		       40		      .byte.b	#$40
+    337  f1ce		       40		      .byte.b	#$40
+    338  f1cf		       40		      .byte.b	#$40
+    339  f1d0
+    340  f1d0							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    341  f1d0							;; complete ROM size with exactly 4KB
+    342  f1d0							;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    343  fffc					      ORG	$FFFC	; move to position $FFFC in memory
+    344  fffc		       00 f0		      word.w	Reset	; write 2 bytes with the program reset address
+    345  fffe		       00 f0		      word.w	Reset	; write 2 bytes with the interruption vector

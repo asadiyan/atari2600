@@ -175,7 +175,7 @@ DrawSpriteP1:
     BNE GameLineLoop            ; repeat next main game scanline until finished
 
     LDA #0
-    STA JetAnimOffset
+    STA JetAnimOffset           ; reset jet animation frame to zero each frame 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; display overscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -223,6 +223,24 @@ CheckP0Right:
     STA JetAnimOffset           ; set animation offset to second frame
 
 EndInputCheck:                  ; fallback when no input was performed 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; calculation to update position for next fram
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+UpdateBomberPosition:
+    LDA BomberYPos
+    CLC
+    CMP #0                      ; compare bomber Y-position with zero
+    BMI ResetBomberPosition     ; if it is < 0 then reset Y-position to the top 
+    DEC BomberYPos              ; else, decrement enemy Y-position for next frame
+    JMP EndPositionUpdate
+ResetBomberPosition:
+    LDA #96
+    STA BomberYPos
+    ; TODO: set bomber X position to random number here
+
+EndPositionUpdate:              ; fallback for the position update code
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; loop back to start a brand new frame
