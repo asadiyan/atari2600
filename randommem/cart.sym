@@ -1,30 +1,17 @@
 --- Symbol List (sorted by symbol)
 0.FREE_BYTES             0000                  
 1.CLEAR_STACK            f006              (R )
-AreWeInsideBomberSprite  f0df                  
-AreWeInsideJetSprite     f0c7                  
 AUDC0                    0015                  
 AUDC1                    0016                  
 AUDF0                    0017                  
 AUDF1                    0018                  
 AUDV0                    0019                  
 AUDV1                    001a                  
-BOMBER_HEIGHT            0009              (R )
-BomberColor              f1e8              (R )
-BomberColorPtr           008a              (R )
-BomberSprite             f1cd              (R )
-BomberSpritePtr          0088              (R )
-BomberXPos               0082              (R )
-BomberYPos               0083              (R )
-CheckP0Down              f150              (R )
-CheckP0Left              f15d              (R )
-CheckP0Right             f16a              (R )
-CheckP0Up                f143                  
-COLUBK                   0009              (R )
-COLUP0                   0006              (R )
-COLUP1                   0007              (R )
-COLUPF                   0008              (R )
-CTRLPF                   000a              (R )
+COLUBK                   0009                  
+COLUP0                   0006                  
+COLUP1                   0007                  
+COLUPF                   0008                  
+CTRLPF                   000a                  
 CXBLPF                   0006                  
 CXCLR                    002c                  
 CXM0FB                   0004                  
@@ -34,25 +21,20 @@ CXM1P                    0001
 CXP0FB                   0002                  
 CXP1FB                   0003                  
 CXPPMM                   0007                  
-Div15Loop                f18c              (R )
-DrawSpriteP0             f0d1              (R )
-DrawSpriteP1             f0e9              (R )
 ENABL                    001f                  
 ENAM0                    001d                  
 ENAM1                    001e                  
-EndInputCheck            f177              (R )
-EndPositionUpdate        f186              (R )
-GameLineLoop             f0c7              (R )
-GameVisibleLines         f0ad                  
-GetRandomBomberPosition  f19d              (R )
-GRP0                     001b              (R )
-GRP1                     001c              (R )
+GetRandomBit             f046              (R )
+GetRandomByte            f058              (R )
+GetRandomValue           f036                  
+GRP0                     001b                  
+GRP1                     001c                  
 HMBL                     0024                  
 HMCLR                    002b                  
 HMM0                     0022                  
 HMM1                     0023                  
-HMOVE                    002a              (R )
-HMP0                     0020              (R )
+HMOVE                    002a                  
+HMP0                     0020                  
 HMP1                     0021                  
 INPT0                    0008                  
 INPT1                    0009                  
@@ -61,39 +43,32 @@ INPT3                    000b
 INPT4                    000c                  
 INPT5                    000d                  
 INTIM                    0284                  
-JET_HEIGHT               0009              (R )
-JetAnimOffset            008c              (R )
-JetColor                 f1d6              (R )
-JetColorPtr              0086              (R )
-JetColorTurn             f1df                  
-JetSprite                f1bb              (R )
-JetSpritePtr             0084              (R )
-JetSpriteTurn            f1c4                  
-JetXPos                  0080              (R )
-JetYPos                  0081              (R )
+MemLoop                  f022              (R )
 NUSIZ0                   0004                  
-NUSIZ1                   0005              (R )
-PF0                      000d              (R )
-PF1                      000e              (R )
-PF2                      000f              (R )
-Random                   008d              (R )
+NUSIZ1                   0005                  
+PF0                      000d                  
+PF1                      000e                  
+PF2                      000f                  
+Rand1                    0081              (R )
+Rand2                    0082              (R )
+Rand3                    0083              (R )
+Rand4                    0084              (R )
+Random                   0080              (R )
+RandomByteLoop           f05a              (R )
 REFP0                    000b                  
 REFP1                    000c                  
 RESBL                    0014                  
-Reset                    f000              (R )
-ResetBomberPosition      f183              (R )
 RESM0                    0012                  
 RESM1                    0013                  
 RESMP0                   0028                  
 RESMP1                   0029                  
-RESP0                    0010              (R )
+RESP0                    0010                  
 RESP1                    0011                  
 RSYNC                    0003                  
-SetObjectXPos            f189              (R )
-StartFrame               f03f              (R )
+Start                    f000              (R )
 SWACNT                   0281                  
 SWBCNT                   0283                  
-SWCHA                    0280              (R )
+SWCHA                    0280                  
 SWCHB                    0282                  
 T1024T                   0297                  
 TIA_BASE_ADDRESS         0000              (R )
@@ -103,13 +78,12 @@ TIM1T                    0294
 TIM64T                   0296                  
 TIM8T                    0295                  
 TIMINT                   0285                  
-UpdateBomberPosition     f177                  
-VBLANK                   0001              (R )
+VBLANK                   0001                  
 VDELBL                   0027                  
 VDELP0                   0025                  
 VDELP1                   0026                  
 VERSION_MACRO            006a                  
 VERSION_VCS              0069                  
-VSYNC                    0000              (R )
-WSYNC                    0002              (R )
+VSYNC                    0000                  
+WSYNC                    0002                  
 --- End of Symbol List.

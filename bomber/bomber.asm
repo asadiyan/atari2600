@@ -21,6 +21,7 @@ JetColorPtr     word            ; pointer to player0 color lookup table
 BomberSpritePtr word            ; pointer to player1 sprite lookup table
 BomberColorPtr  word            ; pointer to player1 color lookup table
 JetAnimOffset   byte            ; player0 sprite frame offset for animation
+Random          byte            ; random number generated to set enemy position
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; define constants
@@ -51,6 +52,9 @@ Reset:
 
     LDA #54
     STA BomberXPos              ; BomberXPos = 54 
+
+    LDA #%11010100
+    STA Random                  ; Random = $D4
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; initialize the pointers to correct lookup table address
@@ -235,9 +239,7 @@ UpdateBomberPosition:
     DEC BomberYPos              ; else, decrement enemy Y-position for next frame
     JMP EndPositionUpdate
 ResetBomberPosition:
-    LDA #96
-    STA BomberYPos
-    ; TODO: set bomber X position to random number here
+    JSR GetRandomBomberPosition ; call subroutine for random X-position 
 
 EndPositionUpdate:              ; fallback for the position update code
 
@@ -266,6 +268,37 @@ Div15Loop:
     ASL                         ; four shift left to get only the top four bits
     STA HMP0,Y                  ; store the fine offset to the correct HMxx
     STA RESP0,Y                 ; fix object position in 15-step increment
+    RTS
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; subroutine to generate a linear-feedback shift rwgister random number
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; generate a LFSR random number 
+;; divide random value by 4 to limit the size of thr result to match river
+;; add 30 to compensate for left green playfield
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+GetRandomBomberPosition SUBROUTINE
+    LDA Random
+    ASL
+    EOR Random
+    ASL
+    EOR Random
+    ASL
+    ASL
+    EOR Random
+    ASL
+    ROL Random                  ; performs a series of shifts and bit operations
+    
+    LSR
+    LSR                         ; divide the value by 4 with 2 right shifts
+    STA BomberXPos              ; save it to the variable BomberXPos
+    LDA #30
+    ADC BomberXPos              ; BomberXPos + 30
+    STA BomberXPos              ; set the new value to the BomberXPos variable
+
+    LDA #96
+    STA BomberYPos              ; sets the Y-position to the top of screen
+
     RTS
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
