@@ -44,7 +44,7 @@ Reset:
     LDA #10
     STA JetYPos                 ; JetYPos = 10
 
-    LDA #0
+    LDA #60
     STA JetXPos                 ; JetXPos = 60
 
     LDA #83
@@ -98,9 +98,9 @@ StartFrame:
     STA WSYNC
     STA HMOVE                   ; apply the horizontal offsets previously set
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; display VSYNC and VBLANK
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     LDA #2
     STA VBLANK                  ; turn on VBLANK
     STA VSYNC                   ; turn on VSYNC
@@ -114,9 +114,24 @@ StartFrame:
     REPEND
     STA VBLANK                  ; turn off VBLANK
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; display the 96 visible scanlines (because 2-line kernel) 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; display the score board lines
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    LDA #0                      ; clear TIA registers before each new frame
+    STA PF0
+    STA PF1
+    STA PF2
+    STA GRP0
+    STA GRP1
+    STA COLUPF
+    REPEAT 20
+        STA WSYNC               ; display 20 scanlines where the scoreboard goes
+    REPEND
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; display the 96 visible scanlines (because 2-line kernel)
+;; 192 - 20 (scoreboard scanlines) = 172 / 2 = 86 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 GameVisibleLines:
     LDA #$84
     STA COLUBK                  ; set color of background to blue
@@ -136,7 +151,7 @@ GameVisibleLines:
     LDA #0                      
     STA PF2                     ; setting PF2 bit pattern
 
-    LDX #96                     ; x counts the umber of remaining scanlines
+    LDX #86                     ; x counts the umber of remaining scanlines
 GameLineLoop:
 AreWeInsideJetSprite:
     TXA                         ; transfer X to A 
@@ -245,6 +260,28 @@ EndPositionUpdate:              ; fallback for the position update code
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; check for objects collision
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+CheckCollisionP0P1:             ; collision beetween jet and bomber
+    LDA #%10000000              ; CXPPMM bit 7 detects P0 and P1 collision
+    BIT CXPPMM                  ; check CXPPMM bit 7 with the above pattern
+    BNE CollisionP0P1           ; collision between P0 and P1 happened
+    JMP CheckCollisionP0PF      ; skip to next check
+CollisionP0P1:
+    JSR GameOver                ; call gameover subroutine
+
+CheckCollisionP0PF:
+    LDA #%10000000              ; CXP0FB bit 7 detects P0 and PlayField collision
+    BIT CXP0FB                  ; check CXP0FB bit 7 with the above pattern
+    BNE CollisionP0PF           ; collision between P0 and PF happened
+    JMP EndCollisionCheck       ; jump to end
+CollisionP0PF:
+    JSR GameOver                ; call gameover subroutine
+
+EndCollisionCheck:              ; fallback 
+    STA CXCLR                   ; clear all collision flag before he next frame
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; loop back to start a brand new frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     JMP StartFrame              ; continue to dispay the next frame
@@ -268,6 +305,14 @@ Div15Loop:
     ASL                         ; four shift left to get only the top four bits
     STA HMP0,Y                  ; store the fine offset to the correct HMxx
     STA RESP0,Y                 ; fix object position in 15-step increment
+    RTS
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; game over subroutine
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+GameOver SUBROUTINE
+    LDA #30
+    STA COLUBK
     RTS
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
