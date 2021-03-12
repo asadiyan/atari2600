@@ -147,6 +147,8 @@ StartFrame:
 
     JSR CalculateDigitOffset    ; calculate scoreboard digit lookup table offset
 
+    JSR GenerateJetSound	; configure an enable our jet engine audio
+
     STA WSYNC
     STA HMOVE                   ; apply the horizontal offsets previously set
 
@@ -262,7 +264,7 @@ AreWeInsideJetSprite:
     TXA                         ; transfer X to A 
     SEC                         ; make sure the carry flag is set before subtraction
     SBC JetYPos                 ; subtract sprite Y-cordinate
-    CMP JET_HEIGHT              ; are we inside the sprite height bounds?
+    CMP #JET_HEIGHT             ; are we inside the sprite height bounds?
     BCC DrawSpriteP0            ; if the result < sprite height then call the draw routine
     LDA #0                      ; else, set lookup table index to zero
 DrawSpriteP0:
@@ -280,7 +282,7 @@ AreWeInsideBomberSprite:
     TXA
     SEC
     SBC BomberYPos
-    CMP BOMBER_HEIGHT
+    CMP #BOMBER_HEIGHT
     BCC DrawSpriteP1
     LDA #0
 DrawSpriteP1:
@@ -335,6 +337,7 @@ CheckP0Down:
     LDA JetYPos
     CMP #5                      ; if (player0 Y position < 5)
     BMI CheckP0Left             ;    then: skip decrement
+.P0DownPressed:    
     DEC JetYPos                 ;    else: decrement Y position
     LDA #0
     STA JetAnimOffset           ; reset animation frame to first frame
@@ -346,8 +349,9 @@ CheckP0Left:
     LDA JetXPos
     CMP #35                     ; if (player0 X position < 35)
     BMI CheckP0Right            ;    then: skip decrement
+.P0LeftPressed:
     DEC JetXPos                 ;    else: decrement X position
-    LDA JET_HEIGHT              
+    LDA #JET_HEIGHT              
     STA JetAnimOffset           ; set animation offset to second frame
 
 CheckP0Right:
@@ -357,8 +361,9 @@ CheckP0Right:
     LDA JetXPos
     CMP #100                    ; if (player0 X position > 100)
     BPL CheckButtonPressed      ;    then: skip increment
+.P0RightPressed:
     INC JetXPos                 ;    else: increment X position
-    LDA JET_HEIGHT              
+    LDA #JET_HEIGHT              
     STA JetAnimOffset           ; set animation offset to second frame
 
 CheckButtonPressed:
@@ -427,6 +432,7 @@ CheckCollisionM0P1:
     CLD
     LDA #0
     STA MissileYPos		; reset the missile pos
+    JSR GetRandomBomberPosition	;
 
 EndCollisionCheck:              ; fallback 
     STA CXCLR                   ; clear all collision flag before he next frame
@@ -435,6 +441,42 @@ EndCollisionCheck:              ; fallback
 ;; loop back to start a brand new frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     JMP StartFrame              ; continue to dispay the next frame
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; generate audio for jet engine sound based on the jet y-position
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; HelpOfSound:
+;; Values / Tone Type
+;; 0, 11  / Silent
+;; 1      / Buzz
+;; 2, 3   / Rumble
+;; 4, 5   / Pure Tone
+;; 6, 10  / Square Wave
+;; 7, 9   / Buzz
+;; 8      / White Noise
+;; 12, 13 / Pure Tone 
+;; 14     / Square Wave
+;; 15     / Buzz
+
+
+GenerateJetSound SUBROUTINE
+    LDA #1
+    STA AUDV0			; set the new audio volume register 
+    
+    LDA JetYPos			; loads the accumulator with jet y-position
+    LSR
+    LSR
+    LSR				; divide the accumulator by 8(using right shift)
+    STA Temp			; save y/8 value in the temp variable 
+    LDA #31
+    SEC
+    SBC Temp			; subtract 31 - (y / 8)
+    STA AUDF0			; set the new audio frequency/pitch register
+    
+    LDA #8
+    STA AUDC0			; set the new audio tone type register
+    
+    RTS
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; set the colors for the terrain and river 
