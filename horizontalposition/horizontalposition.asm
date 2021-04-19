@@ -13,7 +13,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     SEG.U Variable
     ORG $80
-P0XPos    byte           ; sprite X cordinate
+    P0XPos    byte           ; sprite X cordinate
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; strat our ROM code segment starting at $F000
@@ -86,7 +86,7 @@ DivideLoop:
     STA VBLANK           ; turn VBLANK off
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; draw the 192 visible scanline 
+;; draw the 192 = 60 + 8 + 124 visible scanline 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     REPEAT 60
         STA WSYNC
